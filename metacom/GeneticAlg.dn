@@ -1,0 +1,397 @@
+uses time.DateTime
+
+const char IP = "localhost"
+const int PORT = 2011
+
+data Ind {
+  int gene[]
+  dec fitness
+}
+
+data Config{
+  char description[]
+  String compNames[] // list of components name
+  String relations[] // how components connect to each other
+}
+
+data Map{
+  String compNames[]
+}
+
+const char debugMSG[] = "[@GeneticAlg]"
+
+component provides App requires io.Output out,io.Input in, util.RandomInt rand, data.IntUtil iu,
+                                data.DecUtil du, time.Calendar time, io.File, time.DateUtil dtu, rest.RESys, data.StringUtil strUtil{
+  int geneLenght = 0
+  int generation = 0
+  int popMax = 0
+
+
+  int nogoodnameyet[] = new int[](2, 4, 3, 6)
+
+  Config allConfigs[] = null
+
+  Map availableComponents[] = null
+
+  RESys sys = null
+
+  Ind[] sort(Ind lista[], bool ascending){
+		Ind result[] = lista
+
+		if (result.arrayLength > 1){
+			bool swap = true
+			while (swap){
+				swap = false
+				for (int i = 0; i < result.arrayLength - 1; i++){
+					bool doSwap = false
+					if (ascending)
+						doSwap = result[i+1].fitness < result[i].fitness
+						else
+						doSwap = result[i+1].fitness > result[i].fitness
+
+					if (doSwap){
+						Data tmp = result[i]
+
+						result[i] = result[i+1]
+						result[i+1] = tmp
+
+						swap = true
+						}
+					}
+				}
+			}
+
+		return result
+	}
+
+  void printConfigs(){
+    for(int i = 0; i < allConfigs.arrayLength; i++){
+      out.println("CONFIG $(iu.intToString(i))\n $(allConfigs[i].description)")
+      out.println("################ Components #######################")
+      for(int j = 0; j < allConfigs[i].compNames.arrayLength; j++){
+        out.println("$(iu.intToString(j)): $(allConfigs[i].compNames[j].string)")
+      }
+      out.println("################ Relations #######################")
+      for(int j = 0; j < allConfigs[i].relations.arrayLength; j++){
+        out.println("$(iu.intToString(j)): $(allConfigs[i].relations[j].string)")
+      }
+    }
+  }
+
+  void getConfigs(){
+    File f = new File("../metacom/txt/allconfigs.txt", File.FILE_ACCESS_READ)
+
+    char configs[] = f.read(f.getSize())
+
+    String temp[] = strUtil.explode(configs, " ")
+
+    allConfigs = new Config[temp.arrayLength]
+
+    for(int pointer = 0; pointer < temp.arrayLength; pointer++){
+      allConfigs[pointer] = new Config()
+      allConfigs[pointer].description = new char[](temp[pointer].string)
+      allConfigs[pointer].compNames = new String[](strUtil.explode(strUtil.explode(temp[pointer].string,"|")[0].string,","))
+      allConfigs[pointer].relations = new String[](strUtil.explode(strUtil.explode(temp[pointer].string,"|")[1].string,","))
+    }
+  }
+
+  void printAvailableComps(){
+    for(int i = 0; i < availableComponents.arrayLength;i++){
+      out.println("Components $(iu.intToString(i))")
+      for(int j = 0; j < availableComponents[i].compNames.arrayLength; j++){
+        out.println("$(iu.intToString(j)): $(availableComponents[i].compNames[j].string)")
+      }
+    }
+  }
+
+  void getAvailableComps(){
+    File f = new File("../metacom/txt/compList.txt", File.FILE_ACCESS_READ)
+
+      char allComps[] = f.read(f.getSize())
+
+      String temp[] = strUtil.explode(allComps, " ")
+      //out.println("Debug Comps parts $(iu.intToString(temp.arrayLength))")
+      availableComponents = new Map[temp.arrayLength]
+
+      for(int pointer = 0; pointer < temp.arrayLength; pointer++){
+        availableComponents[pointer] = new Map()
+        availableComponents[pointer].compNames = new String[](strUtil.explode(strUtil.explode(temp[pointer].string,"|")[0].string,","))
+      }
+  }
+
+  int[] interpreterDescriptionToGene(Config config){
+    int gene[] = new int[geneLenght]
+    for(int i = 0; i < geneLenght; i++){
+      gene[i] = 0
+      for(int j = 0; j < availableComponents[i].compNames.arrayLength; j++){
+        for(int k = 0; k < config.compNames.arrayLength;k++){
+          if(config.compNames[k].string == availableComponents[i].compNames[j].string){
+            gene[i] = j + 1
+          }
+        }
+      }
+    }
+
+    return gene
+  }
+
+  char[] interpreterGeneToDescription(int gene[]){
+    bool hasFound = false
+    int count = 0
+    int i
+    for(i = 0; i < allConfigs.arrayLength; i++){
+      int j = 0
+      while(j < allConfigs[i].compNames.arrayLength){
+        if(count == geneLenght){
+          hasFound = true
+          break
+        }
+        if((gene[count]) == 0 ) {
+          count++
+        } else {
+          if(availableComponents[count].compNames[(gene[count]-1)].string == allConfigs[i].compNames[j].string){
+            count++
+            j = 0
+          } else {
+            j++
+          }
+        }
+      }
+
+      if(hasFound == true) break
+      else count = 0
+    }
+    return allConfigs[i].description
+  }
+
+  void randomizer(){
+    DateTime dt = time.getTime()
+    rand.setSeed(dt.millisecond * dt.millisecond)
+  }
+
+  void fitnessFunction(Ind ind){
+    //setconfig
+    //get responseTime
+    //
+  }
+
+  void mutation(Ind ind){
+    int randomPos = rand.get(geneLenght)
+    int newGene
+    if(randomPos == 2 || randomPos == 3){
+      while(1){
+        newGene = rand.get(nogoodnameyet[randomPos]+1)
+        if(newGene != ind.gene[randomPos]) break
+      }
+    } else {
+      while(1){
+        newGene = rand.get(nogoodnameyet[randomPos])
+        if(newGene != ind.gene[randomPos]) break
+      }
+    }
+    out.println("Position = $randomPos Old gene = $(ind.gene[randomPos]) New Gene = $newGene")
+    ind.gene[randomPos] = newGene
+
+  }
+
+  bool probMutation(Ind ind){
+    int random = rand.get(100)
+    if(random < 60){
+      mutation(ind)
+      return true
+    }
+    return false
+  }
+
+
+  Ind[] createFirstPopulation(Ind population[]){
+    bool hasEqual = false
+    int popLength = 0
+    Ind aux = new Ind()
+    int cont
+    while(popLength < popMax){
+        Ind ind = new Ind()
+        ind.gene = new int[geneLenght]
+        //TODO: create a way to select random configs in configList and
+      }
+  return population
+  }
+
+//Implementation of a tournament selection method
+  Ind[] parentSelection(Ind population[]){
+    int quantity
+    if(popMax <= 20){
+      quantity = 6
+    } else{
+      quantity = ((popMax*3)/10)
+    }
+
+    if(quantity % 2 == 1) quantity++
+
+    Ind parents[] = new Ind[quantity]
+
+    int aux[] = new int[popMax]
+
+    parents[0] = population[0]
+    int cont = 1
+    aux[0] = 1
+
+    //aux vector to control selected parents
+    for(int i = 1; i < popMax ; i++){
+      aux[i] = 0
+    }
+
+    while(cont < quantity){
+      int rand1
+      int rand2
+      while(1){
+        rand1 = rand.get(popMax)
+        if(aux[rand1] == 0) break
+      }
+
+      while(1){
+        rand2 = rand.get(popMax)
+        if(aux[rand2] == 0 && rand2 != rand1) break
+      }
+      //tournament selection method
+        //out.println("$(du.decToString(population[rand1].fitness))[$rand1] x $(du.decToString(population[rand2].fitness))[$rand2]")
+        if(population[rand1].fitness > population[rand2].fitness){
+          parents[cont] = population[rand1]
+          aux[rand1] = 1
+          cont++
+          //out.println("$(du.decToString(population[rand1].fitness)) wins\n")
+        } else {
+          parents[cont] = population[rand2]
+          aux[rand2] = 1
+          cont++
+         //out.println("$(du.decToString(population[rand2].fitness)) wins\n")
+        }
+    }
+    return parents
+  }
+
+  //Crossing over implemented with a 2 points cut method
+  Ind[] crossoverParents(Ind parents[]){
+    int parentslength = parents.arrayLength
+    int cutLenght = 0
+    Ind children[] = new Ind[parentslength]
+
+    int i
+    int j
+    int k
+    dec num = geneLenght
+    // starting cross over
+    for(i = 0; i < parentslength; i+=2){
+
+      children[i] = new Ind()
+      children[i].gene = new int[geneLenght]
+
+      children[i+1] = new Ind()
+      children[i+1].gene = new int[geneLenght]
+
+      //selecting cut length, need to be between 25-50% of gene lenght
+      while(1){
+        cutLenght = rand.get((geneLenght/2)+1)
+        if(num*0.25 <= cutLenght ) break
+      }
+      int iniCut = rand.get((geneLenght-cutLenght)+1)
+
+      int endCut = iniCut+cutLenght-1
+
+      out.println("$(debugMSG) ini $iniCut fim $endCut cutLenght $cutLenght")
+
+      for(k = 0; k < geneLenght; k++){
+        if(iniCut <= k && k <= endCut){
+          children[i].gene[k] = parents[i+1].gene[k]
+          children[i+1].gene[k] = parents[i].gene[k]
+        } else {
+          children[i].gene[k] = parents[i].gene[k]
+          children[i+1].gene[k] = parents[i+1].gene[k]
+        }
+
+      }
+
+      //looking for mutations
+      probMutation(children[i])
+      probMutation(children[i+1])
+
+      //fitnessFunction(children[i])
+      //fitnessFunction(children[i+1])
+    }
+
+    return children
+  }
+
+
+  int App:main(AppParam params[]){
+    Ind ind
+    Ind population[]
+    Ind parents[]
+    Ind children[]
+    int j = 0
+    int i = 0
+    bool hasFound = false
+    int maxGeneration = 0
+
+    getConfigs()
+    //printConfigs()
+
+    getAvailableComps()
+    //printAvailableComps()
+
+    sys = new RESys(IP, PORT)
+
+    sys.setMain("../repository/TCPNetwork.o")
+
+    sys.addProxy("|../metacom/monitoring/proxies/HTTPProxy.o|*(*:HTTPGET[0]:*)|")
+
+    String temp[] = sys.getAllConfigs()
+
+    out.println("$(temp[0].string)")
+
+    //geneLenght = availableComponents.arrayLength
+
+    randomizer()
+
+/*
+    out.println("Population max length: ")
+    popMax = iu.intFromString(in.readln())
+
+    out.println("Insert the max of generations: ")
+    maxGeneration = iu.intFromString(in.readln())
+
+    population = new Ind[popMax]
+
+    population = createFirstPopulation(population)
+*/
+    //parents = parentSelection(population)
+
+/*
+    parents = new Ind[2]
+    Ind ind1 = new Ind()
+    Ind ind2 = new Ind()
+    ind1.gene = new int[](1,2,3,4)
+    ind2.gene = new int[](2,3,2,1)
+
+    parents[0] = ind1
+    parents[1] = ind2
+
+    children = crossoverParents(parents)
+    for(i = 0; i < 2;i++){
+      out.print("Child $i - ")
+      for(j = 0; j < geneLenght; j++){
+        out.print("$(iu.intToString(children[i].gene[j])),")
+      }
+      out.println("")
+    }
+*/
+
+    //j = 0
+    //for(i = (popMax - (children.arrayLength)); i < popMax ; i++){
+    //  population[i] = children[j]
+    //  j++
+  //  }
+
+    return 0
+  }
+}
