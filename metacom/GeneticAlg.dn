@@ -2,9 +2,10 @@ uses time.DateTime
 
 const char IP[] = "localhost"
 const int PORT = 2011
-const int observationWindow = 1000
+const int observationWindow = 2000
 
 data Ind {
+  int id
   char description[]
   int gene[]
   dec fitness
@@ -29,6 +30,7 @@ time.Timer t, data.json.JSONParser parser{
   int geneLenght = 0
   int generation = 0
   int popMax
+  int indNum = 0
 
   Config allConfigs[] = null
 
@@ -236,12 +238,14 @@ time.Timer t, data.json.JSONParser parser{
         if(aux[random] == 0){
           ind.gene = interpreterDescriptionToGene(allConfigs[random])
           ind.description = allConfigs[random].description
+          ind.id = popLength + 1
           fitnessFunction(ind)
           population[popLength] = ind
           aux[random] = 1
           popLength++
         }
       }
+  indNum = popLength
   return population
 }
 
@@ -358,8 +362,21 @@ time.Timer t, data.json.JSONParser parser{
     return children
   }
 
+  Ind[] eliminationProcess(Ind population[], Ind children[]){
+    int i = population.arrayLength - 1
+    int j = 0
+    while(j < children.arrayLength){
+      if(children[i].description != null){
+        population[i] = children[j]
+        i--
+      }
+      j++
+    }
+    return population
+  }
+
   void printInd(Ind ind){
-    out.print("$(debugMSG) Printing ind Gene = ")
+    out.print("$(debugMSG) Printing ind $(iu.intToString(ind.id)) Gene = ")
     for(int i = 0; i <ind.gene.arrayLength; i++) {
       out.print("$(iu.intToString(ind.gene[i])),")
     }
@@ -408,8 +425,11 @@ time.Timer t, data.json.JSONParser parser{
 
     out.println("$(debugMSG) First Population created")
 
+    //population = sort(population, true)
+
     for(int num = 0; num < popMax; num++) printInd(population[num])
 
+    /*
     parents = parentSelection(population)
 
     out.println("$(debugMSG) Parents selected")
@@ -426,7 +446,7 @@ time.Timer t, data.json.JSONParser parser{
       else out.println("Apto")
     }
 
-
+    */
     return 0
   }
 }
