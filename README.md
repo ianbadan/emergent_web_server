@@ -37,7 +37,7 @@ Important commands:
 
 dnc make.dn -v
 
-dana make -l seams_compositions/common_node/four_main_compositions/four_compositions0.config (for linux)
+dana make -l seams_compositions/common_node/four_main_compositions/four_compositions.config (for linux)
 
 dana make -w seams_compositions/common_node/four_main_compositions/four_compositions.config (for windows)
 
