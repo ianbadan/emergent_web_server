@@ -1,0 +1,31 @@
+const char debugMSG[] = "[@ZSTD]"
+
+component provides compression.Compression requires io.Output out, data.IntUtil iu, os.Run run, time.DateUtil dateUtil, io.FileSystem fileSystem {
+	char[] Compression:compressResource(char resource[]) {
+		// verify if zipped exists
+		// if it does and if it was created after the original
+		// just return it, without zipping
+		// otherwise, zip it!
+		char fileZipped[] = new char[](resource, ".zst")
+		if (fileSystem.exists(fileZipped)) {
+			DateTime original = fileSystem.getInfo(resource).modified
+			DateTime zipped = fileSystem.getInfo(fileZipped).modified
+			if (dateUtil.after(zipped, original)) { return fileZipped }
+		}
+
+		char newName[] = ""
+
+		char osCommand[] = new char[]("zstd -fkq ", resource)
+		RunStatus rS = run.execute(osCommand)
+		if (rS.executed) { newName = fileZipped }
+		return newName
+	}
+
+	char[] Compression:algorithmName() {
+		return "ZStandard"
+	}
+
+	char[] Compression:getExtension() {
+		return ".zst"
+	}
+}

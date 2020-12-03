@@ -51,7 +51,7 @@ component provides request.RequestHandler(Destructor) requires io.Output out, da
 			if (destroying && state.workCount == 0) { break }
 		}
 	}
-	
+
 	void setup() {
 		if (!setupDone) {
 			for (int i = 0; i < NUM_THREADS; i++) {
@@ -65,7 +65,7 @@ component provides request.RequestHandler(Destructor) requires io.Output out, da
 			setupDone = true
 		}
 	}
-	
+
 	//TODO: decide on the policy to assign a WorkItem to a worker thread
 	WorkerThread getWorkerFor(TCPSocket s) {
 		if (lastUsedWorker == null) { lastUsedWorker = workers }
@@ -73,14 +73,14 @@ component provides request.RequestHandler(Destructor) requires io.Output out, da
 		lastUsedWorker = lastUsedWorker.next
 		return result
 	}
-	
-	void RequestHandler:handleRequest(TCPSocket s) {
+
+	void RequestHandler:handleRequest(store TCPSocket s) {
 		setup()
 		WorkItem nwi = new WorkItem(s)
 		WorkerThread wt = getWorkerFor(s)
 		mutex(wt.workLock) {
 			if (wt.lastWork == null) { wt.work = nwi }
-			else { wt.lastWork.next = nwi }	
+			else { wt.lastWork.next = nwi }
 			wt.lastWork = nwi
 			wt.workCount ++
 		}
