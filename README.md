@@ -55,3 +55,5 @@ dana -sp ../repository/ ESLauncher.o
 dana -sp ../repository GeneticAlg.o
 
 ss -ltn
+
+brotli só funciona com https

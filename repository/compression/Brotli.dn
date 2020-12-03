@@ -22,7 +22,7 @@ component provides compression.Compression requires io.Output out, data.IntUtil 
 	}
 
 	char[] Compression:algorithmName() {
-		return "brotli"
+		return "br"
 	}
 
 	char[] Compression:getExtension() {

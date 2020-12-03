@@ -2,7 +2,7 @@ uses time.DateTime
 
 const char IP[] = "localhost"
 const int PORT = 2011
-const int observationWindow = 2000
+const int observationWindow = 4000
 
 data Ind {
   int id
@@ -28,7 +28,6 @@ data.DecUtil du, time.Calendar time, io.File, time.DateUtil dtu, rest.RESys, dat
 time.Timer t, data.json.JSONParser parser{
 
   int geneLenght = 0
-  int generation = 0
   int popMax
   int indNum
 
@@ -183,11 +182,10 @@ time.Timer t, data.json.JSONParser parser{
   }
 
   void fitnessFunction(Ind ind){
+    printInd(ind)
     out.println("$(debugMSG) Starting fitness calculation process")
     sys.setConfig(ind.description)
-
     t.sleep(observationWindow)
-
     JSONElement document = parser.parseDocument(sys.getPerceptionData())
     JSONElement metricsJSON = parser.getValue(document, "metrics")
     if (metricsJSON != null) {
@@ -207,7 +205,7 @@ time.Timer t, data.json.JSONParser parser{
       newGene = rand.get((availableComponents[randomPos].arrayLength)+1)
       if(newGene != ind.gene[randomPos]) break
       }
-    out.println("Position = $randomPos Old gene = $(ind.gene[randomPos]) New Gene = $newGene")
+    out.println("$(debugMSG) Position = $randomPos Old gene = $(ind.gene[randomPos]) New Gene = $newGene")
     ind.gene[randomPos] = newGene
   }
 
@@ -321,16 +319,16 @@ time.Timer t, data.json.JSONParser parser{
       children[i+1] = new Ind()
       children[i+1].gene = new int[geneLenght]
 
-      //selecting cut length, need to be between 25-50% of gene lenght
+      //selecting cut length, need to be between 25-75% of gene lenght
       while(1){
-        cutLenght = rand.get((geneLenght/2)+1)
-        if(num*0.25 <= cutLenght ) break
+        cutLenght = rand.get(geneLenght)
+        if(num*0.25 <= cutLenght && cutLenght <= num*0.75) break
       }
       int iniCut = rand.get((geneLenght-cutLenght)+1)
 
       int endCut = iniCut+cutLenght-1
 
-      out.println("$(debugMSG) ini $iniCut fim $endCut cutLenght $cutLenght")
+      out.println("$(debugMSG) ******* ini $iniCut fim $endCut cutLenght $cutLenght")
 
       for(k = 0; k < geneLenght; k++){
         if(iniCut <= k && k <= endCut){
@@ -341,7 +339,8 @@ time.Timer t, data.json.JSONParser parser{
           children[i+1].gene[k] = parents[i+1].gene[k]
         }
       }
-
+      children[i].id = indNum++
+      children[i+1].id = indNum++
       //looking for mutations
       probMutation(children[i])
       probMutation(children[i+1])
@@ -365,7 +364,7 @@ time.Timer t, data.json.JSONParser parser{
     int i = population.arrayLength - 1
     int j = 0
     while(j < children.arrayLength){
-      if(children[i].description != null){
+      if(children[j].description != null){
         population[i] = children[j]
         i--
       }
@@ -391,10 +390,12 @@ time.Timer t, data.json.JSONParser parser{
     int i = 0
     bool hasFound = false
     int maxGeneration = 0
+    int generation = 0
 
     randomizer()
 
     sys = new RESys(IP, PORT)
+    out.println("$(debugMSG) RESys connected")
 
     //sys.setMain("../repository/TCPNetwork.o")
 
@@ -404,16 +405,18 @@ time.Timer t, data.json.JSONParser parser{
     //printConfigs()
 
     getAvailableComps()
-    printAvailableComps()
+    //printAvailableComps()
+
     out.println("$(debugMSG) MaxConfig = $(iu.intToString(allConfigs.arrayLength))")
 
     geneLenght = availableComponents.arrayLength
 
-    popMax = ((allConfigs.arrayLength)*(15/100))
+
     //popMax = allConfigs.arrayLength
+    popMax = (allConfigs.arrayLength*15/100)
     if(popMax % 2 == 1) popMax++
 
-    maxGeneration = 500
+    maxGeneration = 20
 
     population = new Ind[popMax]
     out.println("$(debugMSG) PopMax = $(iu.intToString(popMax))")
@@ -421,30 +424,38 @@ time.Timer t, data.json.JSONParser parser{
     out.println("$(debugMSG) Creating First Population")
 
     population = createFirstPopulation(population)
+    while(1){
+      if(generation == maxGeneration) break
+      out.println("************************************************************************")
+      out.println("$(debugMSG) Generation: $(iu.intToString(generation))")
+      sort(population, true)
 
-    sort(population, true)
+      out.println("$(debugMSG) First Population created")
 
-    out.println("$(debugMSG) First Population created")
+      for(int num = 0; num < popMax; num++) printInd(population[num])
 
-    for(int num = 0; num < popMax; num++) printInd(population[num])
-/*
-    parents = parentSelection(population)
+      parents = parentSelection(population)
 
-    out.println("$(debugMSG) Parents selected")
+      out.println("$(debugMSG) Parents selected")
 
-    for(int num = 0; num < parents.arrayLength; num++) printInd(parents[num])
+      for(int num = 0; num < parents.arrayLength; num++) printInd(parents[num])
 
-    children = crossoverParents(parents)
+      children = crossoverParents(parents)
 
-    out.println("$(debugMSG) Children selected")
+      out.println("$(debugMSG) Children selected")
 
-    for(int num = 0; num < children.arrayLength; num++) {
-      printInd(children[num])
-      if(children[num].description == null) out.println("Não apto")
-      else out.println("Apto")
+      for(int num = 0; num < children.arrayLength; num++) {
+        printInd(children[num])
+        if(children[num].description == null) out.println("$(debugMSG) Não apto")
+        else out.println("$(debugMSG) Apto")
+      }
+
+      population = eliminationProcess(population,children)
+      generation++
     }
 
-*/
+
+
     return 0
   }
 }
