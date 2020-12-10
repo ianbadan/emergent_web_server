@@ -2,7 +2,7 @@ uses time.DateTime
 
 const char IP[] = "localhost"
 const int PORT = 2011
-const int observationWindow = 4000
+const int observationWindow = 5000
 
 data Ind {
   int id
@@ -39,7 +39,6 @@ time.Timer t, data.json.JSONParser parser{
 
   Ind[] sort(Ind lista[], bool ascending){
 		Ind result[] = lista
-
 		if (result.arrayLength > 1){
 			bool swap = true
 			while (swap){
@@ -62,8 +61,7 @@ time.Timer t, data.json.JSONParser parser{
 					}
 				}
 			}
-
-		return result
+    return result
 	}
 
   void printConfigs(){
@@ -176,16 +174,12 @@ time.Timer t, data.json.JSONParser parser{
     return null
   }
 
-  void randomizer(){
-    DateTime dt = time.getTime()
-    rand.setSeed(dt.millisecond * dt.millisecond)
-  }
-
   void fitnessFunction(Ind ind){
-    printInd(ind)
-    out.println("$(debugMSG) Starting fitness calculation process")
+    //out.println("$(debugMSG) Starting fitness calculation process")
     sys.setConfig(ind.description)
+
     t.sleep(observationWindow)
+
     JSONElement document = parser.parseDocument(sys.getPerceptionData())
     JSONElement metricsJSON = parser.getValue(document, "metrics")
     if (metricsJSON != null) {
@@ -195,23 +189,83 @@ time.Timer t, data.json.JSONParser parser{
         ind.fitness = value/count
         if(ind.fitness < 0) ind.fitness = observationWindow
     }
-    out.println("$(debugMSG) Process ended")
+    out.println("$(debugMSG) Fitness Process ended")
 	}
 
   void mutation(Ind ind){
-    int randomPos = rand.get(geneLenght)
+    int position = rand.get(geneLenght)
     int newGene
-    while(1){
-      newGene = rand.get((availableComponents[randomPos].arrayLength)+1)
-      if(newGene != ind.gene[randomPos]) break
+    if(position == 1){ //changing HTTPhandler
+      int random = 0
+      while(1){
+      newGene = rand.get(availableComponents[position].compNames.arrayLength)+1
+      if(newGene != ind.gene[position]) break
       }
-    out.println("$(debugMSG) Position = $randomPos Old gene = $(ind.gene[randomPos]) New Gene = $newGene")
-    ind.gene[randomPos] = newGene
+      out.print("$(debugMSG) Mutation Ind $(iu.intToString(ind.id)) | Position = $position | Old gene = $(ind.gene[position]) | New Gene = $newGene ")
+      ind.gene[position] = newGene
+
+      if(newGene == 1){
+        ind.gene[2] = 0
+        ind.gene[3] = 0
+        out.print("| Changing caching and compression to 0 ")
+
+      } else if(newGene == 2){//cache only
+        ind.gene[2] = 0
+        out.print("| Changing compression to 0 ")
+        if(ind.gene[3] == 0){
+          while(1){
+            random = rand.get(availableComponents[3].compNames.arrayLength)+1
+            if(random != 0) break
+            }
+         ind.gene[3] = random
+         out.print("| Changing caching from = 0 to = $random")
+        }
+
+      } else if(newGene == 3){ //cache and compression
+        if(ind.gene[2] == 0){
+          while(1){
+            random = rand.get(availableComponents[2].compNames.arrayLength)+1
+            if(random != 0) break
+            }
+         ind.gene[2] = random
+         out.print("| Changing compression to = $random ")
+        }
+        if(ind.gene[3] == 0){
+          while(1){
+            random = rand.get(availableComponents[3].compNames.arrayLength)+1
+            if(random != 0) break
+            }
+         ind.gene[3] = random
+         out.print("| Changing caching to = $random ")
+        }
+
+      } else if(newGene == 4){ //compression only
+          ind.gene[3] = 0
+          out.print("| Changing caching to 0 ")
+          if(ind.gene[2] == 0){
+            while(1){
+              random = rand.get(availableComponents[2].compNames.arrayLength)+1
+              if(random != 0) break
+              }
+           ind.gene[2] = random
+           out.print("| Changing compression to = $random")
+          }
+        }
+        out.println("")
+    } else {
+        while(1){
+          newGene = rand.get(availableComponents[position].compNames.arrayLength)+1
+          if(newGene != ind.gene[position]) break
+          }
+        out.println("$(debugMSG) Mutation Ind $(iu.intToString(ind.id)) | Position = $position | Old gene = $(ind.gene[position]) | New Gene = $newGene")
+        ind.gene[position] = newGene
+    }
   }
 
   bool probMutation(Ind ind){
     int random = rand.get(100)
-    if(random < 60){
+    if(random < 50){
+      out.println("$(debugMSG) Mutating ")
       mutation(ind)
       return true
     }
@@ -242,9 +296,9 @@ time.Timer t, data.json.JSONParser parser{
           popLength++
         }
       }
-  indNum = popLength
-  return population
-}
+    indNum = popLength
+    return population
+  }
 
 //Implementation of a tournament selection method
   Ind[] parentSelection(Ind population[]){
@@ -255,20 +309,14 @@ time.Timer t, data.json.JSONParser parser{
     } else{
       quantity = ((popMax*3)/10)
     }
-    //out.println("Parents quantity $(iu.intToString(quantity))")
-
     if(quantity % 2 == 1) quantity++
 
     Ind parents[] = new Ind[quantity]
 
     int aux[] = new int[popMax]
-
-    //parents[0] = population[0]
     int cont = 0
-    aux[0] = 1
-
     //aux vector to control selected parents
-    for(int i = 1; i < popMax ; i++){
+    for(int i = 0; i < popMax ; i++){
       aux[i] = 0
     }
 
@@ -304,7 +352,7 @@ time.Timer t, data.json.JSONParser parser{
   Ind[] crossoverParents(Ind parents[]){
     int parentslength = parents.arrayLength
     int cutLenght = 0
-    Ind children[] = new Ind[parentslength]
+    Ind offspring[] = new Ind[parentslength]
 
     int i
     int j
@@ -313,11 +361,11 @@ time.Timer t, data.json.JSONParser parser{
     // starting cross over
     for(i = 0; i < parentslength; i+=2){
 
-      children[i] = new Ind()
-      children[i].gene = new int[geneLenght]
+      offspring[i] = new Ind()
+      offspring[i].gene = new int[geneLenght]
 
-      children[i+1] = new Ind()
-      children[i+1].gene = new int[geneLenght]
+      offspring[i+1] = new Ind()
+      offspring[i+1].gene = new int[geneLenght]
 
       //selecting cut length, need to be between 25-75% of gene lenght
       while(1){
@@ -332,41 +380,64 @@ time.Timer t, data.json.JSONParser parser{
 
       for(k = 0; k < geneLenght; k++){
         if(iniCut <= k && k <= endCut){
-          children[i].gene[k] = parents[i+1].gene[k]
-          children[i+1].gene[k] = parents[i].gene[k]
+          offspring[i].gene[k] = parents[i+1].gene[k]
+          offspring[i+1].gene[k] = parents[i].gene[k]
         } else {
-          children[i].gene[k] = parents[i].gene[k]
-          children[i+1].gene[k] = parents[i+1].gene[k]
+          offspring[i].gene[k] = parents[i].gene[k]
+          offspring[i+1].gene[k] = parents[i+1].gene[k]
         }
       }
-      children[i].id = indNum++
-      children[i+1].id = indNum++
+      offspring[i].id = indNum++
+      offspring[i+1].id = indNum++
       //looking for mutations
-      probMutation(children[i])
-      probMutation(children[i+1])
-
-      children[i].description = interpreterGeneToDescription(children[i].gene)
-      children[i+1].description = interpreterGeneToDescription(children[i+1].gene)
-
-      if(children[i].description != null){
-        fitnessFunction(children[i])
+      probMutation(offspring[i])
+      offspring[i].description = interpreterGeneToDescription(offspring[i].gene)
+      if(offspring[i].description != null){
+        fitnessFunction(offspring[i])
       }
-      if(children[i+1].description != null){
-        fitnessFunction(children[i+1])
+
+      probMutation(offspring[i+1])
+      offspring[i+1].description = interpreterGeneToDescription(offspring[i+1].gene)
+      if(offspring[i+1].description != null){
+        fitnessFunction(offspring[i+1])
       }
 
     }
 
-    return children
+    return offspring
   }
 
-  Ind[] eliminationProcess(Ind population[], Ind children[]){
+  Ind[] eliminationProcess(Ind population[], Ind offspring[]){
     int i = population.arrayLength - 1
     int j = 0
-    while(j < children.arrayLength){
-      if(children[j].description != null){
-        population[i] = children[j]
-        i--
+    int pos = 0
+    bool hasFound = false
+    while(j < offspring.arrayLength){
+      if(offspring[j].description != null){
+        //checking if the ind already is part of the population
+        hasFound = false
+        for(int k = 0; k < population.arrayLength; k++){
+          int count = 0
+          for(int l = 0; l < geneLenght ; l++){
+            if(offspring[j].gene[l] == population[k].gene[l]) count++
+          }
+          if(count == geneLenght){
+            hasFound = true
+            pos = k
+            break
+          }
+        }
+        if(hasFound == false){
+          hasFound = false
+          population[i] = offspring[j]
+          i--
+          out.println("$(debugMSG) Individuo $(iu.intToString(offspring[j].id)) adicionado na população")
+        } else if(offspring[j].fitness < population[pos].fitness){
+          population[pos] = offspring[j]
+          out.println("$(debugMSG) Individuo $(iu.intToString(offspring[j].id)) adicionado por tem fitness menor")
+          }else {
+          out.println("$(debugMSG) Individuo $(iu.intToString(offspring[j].id)) não adicionado por ter fitness maior")
+        }
       }
       j++
     }
@@ -374,7 +445,7 @@ time.Timer t, data.json.JSONParser parser{
   }
 
   void printInd(Ind ind){
-    out.print("$(debugMSG) Printing ind $(iu.intToString(ind.id)) Gene = ")
+    out.print("$(debugMSG) Ind $(iu.intToString(ind.id)) Gene = ")
     for(int i = 0; i <ind.gene.arrayLength; i++) {
       out.print("$(iu.intToString(ind.gene[i])),")
     }
@@ -385,14 +456,15 @@ time.Timer t, data.json.JSONParser parser{
     Ind ind
     Ind population[]
     Ind parents[]
-    Ind children[]
+    Ind offspring[]
     int j = 0
     int i = 0
     bool hasFound = false
-    int maxGeneration = 0
+    int maxGeneration = 50
     int generation = 0
 
-    randomizer()
+    DateTime dt = time.getTime()
+    rand.setSeed(dtu.toMilliseconds(dt))
 
     sys = new RESys(IP, PORT)
     out.println("$(debugMSG) RESys connected")
@@ -411,12 +483,9 @@ time.Timer t, data.json.JSONParser parser{
 
     geneLenght = availableComponents.arrayLength
 
-
     //popMax = allConfigs.arrayLength
     popMax = (allConfigs.arrayLength*15/100)
     if(popMax % 2 == 1) popMax++
-
-    maxGeneration = 20
 
     population = new Ind[popMax]
     out.println("$(debugMSG) PopMax = $(iu.intToString(popMax))")
@@ -430,32 +499,33 @@ time.Timer t, data.json.JSONParser parser{
       out.println("$(debugMSG) Generation: $(iu.intToString(generation))")
       sort(population, true)
 
-      out.println("$(debugMSG) First Population created")
+      out.println("\n$(debugMSG) Population")
 
       for(int num = 0; num < popMax; num++) printInd(population[num])
 
       parents = parentSelection(population)
 
-      out.println("$(debugMSG) Parents selected")
+      out.println("\n$(debugMSG) Parents selected")
 
       for(int num = 0; num < parents.arrayLength; num++) printInd(parents[num])
 
-      children = crossoverParents(parents)
+      offspring = crossoverParents(parents)
 
-      out.println("$(debugMSG) Children selected")
+      out.println("\n$(debugMSG) Offspring generated")
 
-      for(int num = 0; num < children.arrayLength; num++) {
-        printInd(children[num])
-        if(children[num].description == null) out.println("$(debugMSG) Não apto")
+      for(int num = 0; num < offspring.arrayLength; num++) {
+        printInd(offspring[num])
+        if(offspring[num].description == null) out.println("$(debugMSG) Não apto")
         else out.println("$(debugMSG) Apto")
       }
 
-      population = eliminationProcess(population,children)
+      population = eliminationProcess(population,offspring)
       generation++
     }
-
-
-
+    out.println("************************************************************************")
+    out.println("$(debugMSG) Setting best configuration")
+    printInd(population[0])
+    sys.setConfig(population[0].description)
     return 0
   }
 }

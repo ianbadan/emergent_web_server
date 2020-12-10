@@ -7,11 +7,11 @@ component provides compression.Compression requires io.Output out, data.IntUtil 
 		// just return it, without zipping
 		// otherwise, zip it!
 		char fileZipped[] = new char[](resource, ".gz")
-		/*if (fileSystem.exists(fileZipped)) {
+		if (fileSystem.exists(fileZipped)) {
 			DateTime original = fileSystem.getInfo(resource).modified
 			DateTime zipped = fileSystem.getInfo(fileZipped).modified
 			if (dateUtil.after(zipped, original)) { return fileZipped }
-		}*/
+		}
 		char newName[] = ""
 		// previous version was: gzip -k -f
 		// -k means keep with the original unzipped file
